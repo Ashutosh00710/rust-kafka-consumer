@@ -1,10 +1,12 @@
+pub mod constants;
+pub mod logger;
 pub mod observable_pattern;
 pub mod services;
-use crate::logger::logger as Logger;
-pub mod logger;
 
 use log::{info, warn};
 
+use crate::constants::constants as consumer_constants;
+use crate::logger::logger as Logger;
 use rdkafka::client::ClientContext;
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
@@ -29,12 +31,12 @@ impl ConsumerContext for LoggingConsumerContext {
 // Define a new type for convenience
 type LoggingConsumer = StreamConsumer<LoggingConsumerContext>;
 
-fn create_consumer(brokers: &str, group_id: &str, topic: Vec<&str>) -> LoggingConsumer {
+fn create_consumer() -> LoggingConsumer {
     let context = LoggingConsumerContext;
 
     let consumer: LoggingConsumer = ClientConfig::new()
-        .set("group.id", group_id)
-        .set("bootstrap.servers", brokers)
+        .set("group.id", consumer_constants::GROUP_ID)
+        .set("bootstrap.servers", consumer_constants::BROKERS)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         // Commit automatically every 5 seconds.
@@ -47,7 +49,7 @@ fn create_consumer(brokers: &str, group_id: &str, topic: Vec<&str>) -> LoggingCo
         .expect("Consumer creation failed");
 
     consumer
-        .subscribe(&topic)
+        .subscribe(&consumer_constants::SUBSCRIBE_TO_TOPICS)
         .expect("Can't subscribe to specified topic");
 
     consumer
@@ -55,16 +57,13 @@ fn create_consumer(brokers: &str, group_id: &str, topic: Vec<&str>) -> LoggingCo
 
 #[tokio::main]
 async fn main() {
-    const BROKERS: &str = "localhost:9092,localhost:9093,localhost:9094";
-    const GROUP_ID: &str = "rust-consumer-group";
-    let subscribe_to_topics = vec!["test", "another"];
     let console = Logger::LoggingService {
         log_level: String::from("DEV"),
         name: String::from("main"),
         log_for: vec!["DEV".to_string(), "STAGE".to_string()],
     };
 
-    let consumer = create_consumer(BROKERS, GROUP_ID, subscribe_to_topics);
+    let consumer = create_consumer();
 
     let mut observable = crate::observable_pattern::observable_pattern::Observable::new();
     {

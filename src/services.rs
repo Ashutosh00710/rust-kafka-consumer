@@ -1,4 +1,5 @@
 pub mod services {
+    use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
     use crate::observable_pattern::observable_pattern::Observable;
     use rdkafka::config::ClientConfig;
@@ -17,13 +18,13 @@ pub mod services {
         pub fn new(observable: &mut Observable) -> ServiceMethods {
             ServiceMethods {
                 observable,
-                producer: ServiceMethods::create_producer("localhost:9092,localhost:9093,localhost:9094"),
+                producer: ServiceMethods::create_producer(),
             }
         }
 
-        fn create_producer(brokers: &str) -> FutureProducer {
+        fn create_producer() -> FutureProducer {
             ClientConfig::new()
-                .set("bootstrap.servers", brokers)
+                .set("bootstrap.servers", consumer_constants::BROKERS)
                 .set("queue.buffering.max.ms", "0") // Do not buffer
                 .create()
                 .expect("Producer creation failed")
@@ -44,7 +45,7 @@ pub mod services {
         pub fn handlers(&mut self) {
             let producer = self.producer.clone();
             self.subscribe(Box::new(move |topic, message| {
-                if topic == "test" {
+                if topic == consumer_constants::topic::TEST {
                     let console = LoggingService {
                         log_level: String::from("DEV"),
                         name: String::from("(service) topic: test"),
@@ -80,7 +81,7 @@ pub mod services {
 
             let producer2 = self.producer.clone();
             self.subscribe(Box::new(move |topic, message| {
-                if topic == "another" {
+                if topic == consumer_constants::topic::ANOTHER {
                     let console = LoggingService {
                         log_level: String::from("DEV"),
                         name: String::from("(service) topic: another"),
