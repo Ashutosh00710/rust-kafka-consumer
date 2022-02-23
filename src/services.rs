@@ -4,9 +4,10 @@ pub mod services {
     use crate::observable_pattern::observable_pattern::Observable;
     use rdkafka::config::ClientConfig;
     use rdkafka::error::KafkaError;
-    use rdkafka::message::{BorrowedMessage, OwnedMessage};
+    use rdkafka::message::{BorrowedMessage, OwnedMessage, ToBytes};
     use rdkafka::producer::{FutureProducer, FutureRecord};
     use rdkafka::Message;
+    use serde_json::json;
     use std::time::Duration;
 
     pub struct ServiceMethods<'a> {
@@ -42,6 +43,13 @@ pub mod services {
             self.observable.subscribe(callback);
         }
 
+        fn get_payload_and_key(message: &BorrowedMessage) -> (String, String) {
+            let key = std::str::from_utf8(message.key().unwrap_or(b"No Key Found").to_bytes());
+            let payload =
+                std::str::from_utf8(message.payload().unwrap_or(b"No Payload Found").to_bytes());
+            (key.unwrap().to_string(), payload.unwrap().to_string())
+        }
+
         pub fn handlers(&mut self) {
             let producer = self.producer.clone();
             self.subscribe(Box::new(move |topic, message| {
@@ -53,12 +61,16 @@ pub mod services {
                     };
                     console.log(format!("Listened by topic: {}", topic));
                     let mut response = FutureRecord::to("test.reply");
-                    if let Some(p) = message.payload() {
-                        response = response.payload(p);
-                    }
-                    if let Some(k) = message.key() {
-                        response = response.key(k);
-                    }
+                    let (key, payload) = ServiceMethods::get_payload_and_key(message);
+                    let res = json!({
+                        "message": payload,
+                        "topic": topic,
+                        "reply_for_key": key,
+                        "status": true
+                    })
+                    .to_string();
+                    response = response.key(&key);
+                    response = response.payload(&res);
 
                     let reply_topic = response.topic;
                     let result = futures::executor::block_on(
@@ -89,13 +101,16 @@ pub mod services {
                     };
                     console.log(format!("Listened by topic: {}", topic));
                     let mut response = FutureRecord::to("another.reply");
-                    if let Some(p) = message.payload() {
-                        response = response.payload(p);
-                    }
-                    if let Some(k) = message.key() {
-                        response = response.key(k);
-                    }
-
+                    let (key, payload) = ServiceMethods::get_payload_and_key(message);
+                    let res = json!({
+                        "message": payload,
+                        "topic": topic,
+                        "reply_for_key": key,
+                        "status": true
+                    })
+                    .to_string();
+                    response = response.key(&key);
+                    response = response.payload(&res);
                     let reply_topic = response.topic;
                     let result = futures::executor::block_on(
                         producer2.send(response, Duration::from_secs(1)),

@@ -3,8 +3,6 @@ pub mod logger;
 pub mod observable_pattern;
 pub mod services;
 
-use log::{info, warn};
-
 use crate::constants::constants as consumer_constants;
 use crate::logger::logger as Logger;
 use rdkafka::client::ClientContext;
@@ -21,9 +19,14 @@ impl ClientContext for LoggingConsumerContext {}
 
 impl ConsumerContext for LoggingConsumerContext {
     fn commit_callback(&self, result: KafkaResult<()>, _offsets: &TopicPartitionList) {
+        let console = Logger::LoggingService {
+            log_level: String::from("DEV"),
+            name: String::from("main"),
+            log_for: vec!["DEV".to_string(), "STAGE".to_string()],
+        };
         match result {
-            Ok(_) => info!("Offsets committed successfully"),
-            Err(e) => warn!("Error while committing offsets: {}", e),
+            Ok(_) => console.log("Offsets committed successfully"),
+            Err(e) => console.error(format!("Error while committing offsets: {}", e)),
         };
     }
 }
