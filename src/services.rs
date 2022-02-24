@@ -20,6 +20,7 @@ pub mod services {
 
         fn subscribe(
             &mut self,
+            topic: &str,
             callback: Box<
                 dyn Fn(
                     &str,
@@ -29,12 +30,13 @@ pub mod services {
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         ) {
-            self.observable.subscribe(callback);
+            self.observable.subscribe(topic, callback);
         }
 
         pub fn handlers(&mut self) {
-            self.subscribe(Box::new(move |topic, message, producer, console| {
-                if topic == consumer_constants::topic::TEST {
+            self.subscribe(
+                consumer_constants::topic::TEST,
+                Box::new(move |topic, message, producer, console| {
                     console.log(format!("Listened by topic: {}", topic));
                     let (key, payload) = get_payload_and_key(message);
                     let res = json!({
@@ -52,13 +54,12 @@ pub mod services {
                     );
 
                     return_result(result, console, reply_topic)
-                } else {
-                    None
-                }
-            }));
+                }),
+            );
 
-            self.subscribe(Box::new(move |topic, message, producer, console| {
-                if topic == consumer_constants::topic::ANOTHER {
+            self.subscribe(
+                consumer_constants::topic::ANOTHER,
+                Box::new(move |topic, message, producer, console| {
                     console.log(format!("Listened by topic: {}", topic));
                     let (key, payload) = get_payload_and_key(message);
                     let res = json!({
@@ -75,10 +76,8 @@ pub mod services {
                     );
 
                     return_result(result, console, reply_topic)
-                } else {
-                    None
-                }
-            }));
+                }),
+            );
         }
     }
 }
