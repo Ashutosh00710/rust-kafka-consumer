@@ -15,6 +15,7 @@ pub mod observable_pattern {
                     &str,
                     &BorrowedMessage,
                     FutureProducer,
+                    LoggingService,
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         >,
@@ -44,6 +45,7 @@ pub mod observable_pattern {
                     &str,
                     &BorrowedMessage,
                     FutureProducer,
+                    LoggingService,
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         ) {
@@ -52,13 +54,18 @@ pub mod observable_pattern {
 
         pub fn emit(&self, message: &BorrowedMessage, topic: &str) {
             let console = LoggingService {
-                log_level: String::from("DEV"),
+                log_level: consumer_constants::LOG_LEVEL.to_string(),
                 name: String::from("(observable) emit"),
-                log_for: vec!["DEV".to_string(), "STAGE".to_string()],
+                log_for: consumer_constants::LOG_FOR.map(|f| f.to_string()).to_vec(),
             };
             console.log("Delivering to subscribers");
             for callback in &self.callbacks {
-                callback(topic, message, self.producer.clone());
+                let console = LoggingService {
+                    log_level: consumer_constants::LOG_LEVEL.to_string(),
+                    name: String::from(format!("(service) topic: {}", topic)),
+                    log_for: consumer_constants::LOG_FOR.map(|f| f.to_string()).to_vec(),
+                };
+                callback(topic, message, self.producer.clone(), console);
             }
         }
     }

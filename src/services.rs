@@ -2,9 +2,7 @@ pub mod services {
     use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
     use crate::observable_pattern::observable_pattern::Observable;
-    use crate::service_utils::service_utils::{
-        get_payload_and_key, return_result
-    };
+    use crate::service_utils::service_utils::{get_payload_and_key, return_result};
     use rdkafka::error::KafkaError;
     use rdkafka::message::{BorrowedMessage, OwnedMessage};
     use rdkafka::producer::{FutureProducer, FutureRecord};
@@ -27,6 +25,7 @@ pub mod services {
                     &str,
                     &BorrowedMessage,
                     FutureProducer,
+                    LoggingService,
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         ) {
@@ -34,13 +33,8 @@ pub mod services {
         }
 
         pub fn handlers(&mut self) {
-            self.subscribe(Box::new(move |topic, message, producer| {
+            self.subscribe(Box::new(move |topic, message, producer, console| {
                 if topic == consumer_constants::topic::TEST {
-                    let console = LoggingService {
-                        log_level: String::from("DEV"),
-                        name: String::from("(service) topic: test"),
-                        log_for: vec!["DEV".to_string(), "STAGE".to_string()],
-                    };
                     console.log(format!("Listened by topic: {}", topic));
                     let (key, payload) = get_payload_and_key(message);
                     let res = json!({
@@ -63,13 +57,8 @@ pub mod services {
                 }
             }));
 
-            self.subscribe(Box::new(move |topic, message, producer| {
+            self.subscribe(Box::new(move |topic, message, producer, console| {
                 if topic == consumer_constants::topic::ANOTHER {
-                    let console = LoggingService {
-                        log_level: String::from("DEV"),
-                        name: String::from("(service) topic: another"),
-                        log_for: vec!["DEV".to_string(), "STAGE".to_string()],
-                    };
                     console.log(format!("Listened by topic: {}", topic));
                     let (key, payload) = get_payload_and_key(message);
                     let res = json!({
