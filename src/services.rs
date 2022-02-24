@@ -2,10 +2,12 @@ pub mod services {
     use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
     use crate::observable_pattern::observable_pattern::Observable;
+    use crate::service_utils::service_utils::{
+        get_payload_and_key, return_result
+    };
     use rdkafka::error::KafkaError;
-    use rdkafka::message::{BorrowedMessage, OwnedMessage, ToBytes};
+    use rdkafka::message::{BorrowedMessage, OwnedMessage};
     use rdkafka::producer::{FutureProducer, FutureRecord};
-    use rdkafka::Message;
     use serde_json::json;
     use std::time::Duration;
 
@@ -15,9 +17,7 @@ pub mod services {
 
     impl ServiceMethods<'_> {
         pub fn new(observable: &mut Observable) -> ServiceMethods {
-            ServiceMethods {
-                observable,
-            }
+            ServiceMethods { observable }
         }
 
         fn subscribe(
@@ -33,13 +33,6 @@ pub mod services {
             self.observable.subscribe(callback);
         }
 
-        fn get_payload_and_key(message: &BorrowedMessage) -> (String, String) {
-            let key = std::str::from_utf8(message.key().unwrap_or(b"No Key Found").to_bytes());
-            let payload =
-                std::str::from_utf8(message.payload().unwrap_or(b"No Payload Found").to_bytes());
-            (key.unwrap().to_string(), payload.unwrap().to_string())
-        }
-
         pub fn handlers(&mut self) {
             self.subscribe(Box::new(move |topic, message, producer| {
                 if topic == consumer_constants::topic::TEST {
@@ -49,7 +42,7 @@ pub mod services {
                         log_for: vec!["DEV".to_string(), "STAGE".to_string()],
                     };
                     console.log(format!("Listened by topic: {}", topic));
-                    let (key, payload) = ServiceMethods::get_payload_and_key(message);
+                    let (key, payload) = get_payload_and_key(message);
                     let res = json!({
                         "message": payload,
                         "topic": topic,
@@ -63,16 +56,8 @@ pub mod services {
                     let result = futures::executor::block_on(
                         producer.send(response, Duration::from_secs(1)),
                     );
-                    match result {
-                        Ok(res) => {
-                            console.log(format!("Response sent to: {}", reply_topic));
-                            Some(Ok(res))
-                        }
-                        Err(e) => {
-                            console.log(format!("Error sending response to -> {}", reply_topic));
-                            Some(Err(e))
-                        }
-                    }
+
+                    return_result(result, console, reply_topic)
                 } else {
                     None
                 }
@@ -86,7 +71,7 @@ pub mod services {
                         log_for: vec!["DEV".to_string(), "STAGE".to_string()],
                     };
                     console.log(format!("Listened by topic: {}", topic));
-                    let (key, payload) = ServiceMethods::get_payload_and_key(message);
+                    let (key, payload) = get_payload_and_key(message);
                     let res = json!({
                         "message": payload,
                         "topic": topic,
@@ -100,16 +85,7 @@ pub mod services {
                         producer.send(response, Duration::from_secs(1)),
                     );
 
-                    match result {
-                        Ok(res) => {
-                            console.log(format!("Response sent to: {}", reply_topic));
-                            Some(Ok(res))
-                        }
-                        Err(e) => {
-                            console.log(format!("Error sending response to -> {}", reply_topic));
-                            Some(Err(e))
-                        }
-                    }
+                    return_result(result, console, reply_topic)
                 } else {
                     None
                 }

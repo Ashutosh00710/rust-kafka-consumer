@@ -1,10 +1,12 @@
 pub mod observable_pattern {
-    use rdkafka::{
-        error::KafkaError,
-        message::{BorrowedMessage, OwnedMessage}, producer::FutureProducer, ClientConfig,
-    };
     use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
+    use rdkafka::{
+        error::KafkaError,
+        message::{BorrowedMessage, OwnedMessage},
+        producer::FutureProducer,
+        ClientConfig,
+    };
 
     pub struct Observable {
         callbacks: Vec<
@@ -12,7 +14,7 @@ pub mod observable_pattern {
                 dyn Fn(
                     &str,
                     &BorrowedMessage,
-                    FutureProducer
+                    FutureProducer,
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         >,

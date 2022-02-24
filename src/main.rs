@@ -1,6 +1,7 @@
 pub mod constants;
 pub mod logger;
 pub mod observable_pattern;
+pub mod service_utils;
 pub mod services;
 
 use crate::constants::constants as consumer_constants;
