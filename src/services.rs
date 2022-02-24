@@ -60,7 +60,6 @@ pub mod services {
                         log_for: vec!["DEV".to_string(), "STAGE".to_string()],
                     };
                     console.log(format!("Listened by topic: {}", topic));
-                    let mut response = FutureRecord::to("test.reply");
                     let (key, payload) = ServiceMethods::get_payload_and_key(message);
                     let res = json!({
                         "message": payload,
@@ -69,8 +68,7 @@ pub mod services {
                         "status": true
                     })
                     .to_string();
-                    response = response.key(&key);
-                    response = response.payload(&res);
+                    let response = FutureRecord::to("test.reply").key(&key).payload(&res);
 
                     let reply_topic = response.topic;
                     let result = futures::executor::block_on(
@@ -100,7 +98,6 @@ pub mod services {
                         log_for: vec!["DEV".to_string(), "STAGE".to_string()],
                     };
                     console.log(format!("Listened by topic: {}", topic));
-                    let mut response = FutureRecord::to("another.reply");
                     let (key, payload) = ServiceMethods::get_payload_and_key(message);
                     let res = json!({
                         "message": payload,
@@ -109,8 +106,7 @@ pub mod services {
                         "status": true
                     })
                     .to_string();
-                    response = response.key(&key);
-                    response = response.payload(&res);
+                    let response = FutureRecord::to("another.reply").key(&key).payload(&res);
                     let reply_topic = response.topic;
                     let result = futures::executor::block_on(
                         producer2.send(response, Duration::from_secs(1)),
