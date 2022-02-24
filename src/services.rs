@@ -2,7 +2,6 @@ pub mod services {
     use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
     use crate::observable_pattern::observable_pattern::Observable;
-    use rdkafka::config::ClientConfig;
     use rdkafka::error::KafkaError;
     use rdkafka::message::{BorrowedMessage, OwnedMessage, ToBytes};
     use rdkafka::producer::{FutureProducer, FutureRecord};
@@ -12,23 +11,13 @@ pub mod services {
 
     pub struct ServiceMethods<'a> {
         observable: &'a mut Observable,
-        producer: FutureProducer,
     }
 
     impl ServiceMethods<'_> {
         pub fn new(observable: &mut Observable) -> ServiceMethods {
             ServiceMethods {
                 observable,
-                producer: ServiceMethods::create_producer(),
             }
-        }
-
-        fn create_producer() -> FutureProducer {
-            ClientConfig::new()
-                .set("bootstrap.servers", consumer_constants::BROKERS)
-                .set("queue.buffering.max.ms", "0") // Do not buffer
-                .create()
-                .expect("Producer creation failed")
         }
 
         fn subscribe(
@@ -37,6 +26,7 @@ pub mod services {
                 dyn Fn(
                     &str,
                     &BorrowedMessage,
+                    FutureProducer,
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         ) {
@@ -51,8 +41,7 @@ pub mod services {
         }
 
         pub fn handlers(&mut self) {
-            let producer = self.producer.clone();
-            self.subscribe(Box::new(move |topic, message| {
+            self.subscribe(Box::new(move |topic, message, producer| {
                 if topic == consumer_constants::topic::TEST {
                     let console = LoggingService {
                         log_level: String::from("DEV"),
@@ -89,8 +78,7 @@ pub mod services {
                 }
             }));
 
-            let producer2 = self.producer.clone();
-            self.subscribe(Box::new(move |topic, message| {
+            self.subscribe(Box::new(move |topic, message, producer| {
                 if topic == consumer_constants::topic::ANOTHER {
                     let console = LoggingService {
                         log_level: String::from("DEV"),
@@ -109,7 +97,7 @@ pub mod services {
                     let response = FutureRecord::to("another.reply").key(&key).payload(&res);
                     let reply_topic = response.topic;
                     let result = futures::executor::block_on(
-                        producer2.send(response, Duration::from_secs(1)),
+                        producer.send(response, Duration::from_secs(1)),
                     );
 
                     match result {

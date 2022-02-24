@@ -1,9 +1,9 @@
 pub mod observable_pattern {
     use rdkafka::{
         error::KafkaError,
-        message::{BorrowedMessage, OwnedMessage},
+        message::{BorrowedMessage, OwnedMessage}, producer::FutureProducer, ClientConfig,
     };
-
+    use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
 
     pub struct Observable {
@@ -12,16 +12,27 @@ pub mod observable_pattern {
                 dyn Fn(
                     &str,
                     &BorrowedMessage,
+                    FutureProducer
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         >,
+        producer: FutureProducer,
     }
 
     impl Observable {
         pub fn new() -> Observable {
             Observable {
                 callbacks: Vec::new(),
+                producer: Observable::create_producer(),
             }
+        }
+
+        fn create_producer() -> FutureProducer {
+            ClientConfig::new()
+                .set("bootstrap.servers", consumer_constants::BROKERS)
+                .set("queue.buffering.max.ms", "0") // Do not buffer
+                .create()
+                .expect("Producer creation failed")
         }
 
         pub fn subscribe(
@@ -30,6 +41,7 @@ pub mod observable_pattern {
                 dyn Fn(
                     &str,
                     &BorrowedMessage,
+                    FutureProducer,
                 ) -> Option<Result<(i32, i64), (KafkaError, OwnedMessage)>>,
             >,
         ) {
@@ -44,7 +56,7 @@ pub mod observable_pattern {
             };
             console.log("Delivering to subscribers");
             for callback in &self.callbacks {
-                callback(topic, message);
+                callback(topic, message, self.producer.clone());
             }
         }
     }
