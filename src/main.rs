@@ -48,6 +48,7 @@ fn create_consumer() -> LoggingConsumer {
         .set("bootstrap.servers", consumer_constants::BROKERS)
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
+        .set("allow.auto.create.topics", "true")
         // Commit automatically every 5 seconds.
         .set("enable.auto.commit", "true")
         .set("auto.commit.interval.ms", "5000")
