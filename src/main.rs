@@ -1,8 +1,13 @@
+#[path = "./constants/consumer_constants.rs"]
 pub mod constants;
+#[path = "./logger/logger.rs"]
 pub mod logger;
+#[path = "./observable/observable_pattern.rs"]
 pub mod observable_pattern;
+#[path = "./utils/service_utils.rs"]
 pub mod service_utils;
-pub mod services;
+#[path = "./services/test_service.rs"]
+pub mod test_service;
 
 use crate::constants::constants as consumer_constants;
 use crate::logger::logger as Logger;
@@ -71,7 +76,8 @@ async fn main() {
 
     let mut observable = crate::observable_pattern::observable_pattern::Observable::new();
     {
-        let mut service_methods = crate::services::services::ServiceMethods::new(&mut observable);
+        let mut service_methods =
+            crate::test_service::test_service::ServiceMethods::new(&mut observable);
         service_methods.handlers();
         console.log("Initialized handlers");
     }

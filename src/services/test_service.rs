@@ -1,4 +1,4 @@
-pub mod services {
+pub mod test_service {
     use crate::constants::constants as consumer_constants;
     use crate::logger::logger::LoggingService;
     use crate::observable_pattern::observable_pattern::Observable;
