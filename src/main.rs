@@ -67,24 +67,39 @@ fn create_consumer() -> LoggingConsumer {
 
 #[tokio::main]
 async fn main() {
+    // create a logger instance for main function
     let console = Logger::LoggingService {
-        log_level: String::from("DEV"),
+        log_level: consumer_constants::LOG_LEVEL.to_string(),
         name: String::from("main"),
-        log_for: vec!["DEV".to_string(), "STAGE".to_string()],
+        log_for: consumer_constants::LOG_FOR.map(|f| f.to_string()).to_vec(),
     };
 
+    // create a consumer instance
     let consumer = create_consumer();
 
+    // create an observable instance
     let mut observable = crate::observable_pattern::observable_pattern::Observable::new();
+
+    /// in order to pass observable as a mutable reference to multiple services
+    /// we need to create a block (like from line 85 to 90) for each service
+    ///
+    /// reason: "cannot pass a mutable reference twice"
     {
+        // create the instance of service method and pass mutable reference of observable
+        // to that
         let mut service_methods =
             crate::test_service::test_service::ServiceMethods::new(&mut observable);
         service_methods.handlers();
         console.log("Initialized handlers");
     }
+    // after all the blocks are done all the observers are now in place to respond to their
+    // respective topics/events
     console.log("Observers are ready to receive messages");
 
+    // to keep running this block of code use loop syntax
     loop {
+        // Receives the next message from the stream
+        // This method will block until the next message is available or an error occurs
         match consumer.recv().await {
             Err(e) => {
                 console.error(format!("Kafka error: {}", e));
